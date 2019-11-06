@@ -20,10 +20,11 @@ export class AppComponent implements OnInit{
 	public getData() {
 		const data: GraphViewData = (mock as any).default;
 
-		data.graphElements.forEach((ge) => {
+		data.viewData.netElementsDatum.forEach((ge) => {
 			ge.group = this.getGroup();
 		});
 
+		/*
 		data.viewData.netLinksDatum.forEach((nl) => {
 			const findBy = key => data.graphElements.find((ge) => ge.id === nl[key]);
 			const source = findBy('source');
@@ -36,6 +37,7 @@ export class AppComponent implements OnInit{
 				target: assign(target)
 			};
 		});
+		*/
 
 		console.log(data);
 

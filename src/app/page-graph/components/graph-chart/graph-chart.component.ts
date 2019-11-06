@@ -432,7 +432,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 
 		textGroup.append('tspan')
 			.attr('y', (d) => -getIconHeight(d.type) / 2 - 8)
-			.text((d) => d.name);
+			.text((d) => d.name + ' g: ' + d.group);
 
 		textGroup.append('tspan')
 			.lower()
@@ -482,10 +482,12 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 	 */
 	private simulateForce(): Simulation<NetElementDatum, NetLinkDatum> {
 		const NODE_RADIUS = 60;
-		const CHARGE_STRENGTH = 100;
+		const CHARGE_STRENGTH = 1;
 		const ALPHA_DECAY = .1;
 
-		const linkForce = d3.forceLink(this.netLinksDatum).id((d: NetElementDatum) => String(d.id));
+		const linkForce = d3.forceLink(this.netLinksDatum).id((d: NetElementDatum) => String(d.id)).strength((link: NetLinkDatum) => {
+			return (link.source as NetElementDatum).group === (link.target as NetElementDatum).group ? 1 : 0.1;
+		});
 		const collideForce = d3.forceCollide(NODE_RADIUS);
 		const attractForce = d3.forceManyBody().strength(CHARGE_STRENGTH * 3).distanceMin(NODE_RADIUS * 20);
 		const repelForce = d3.forceManyBody().strength(-CHARGE_STRENGTH).distanceMax(NODE_RADIUS * 5).distanceMin(NODE_RADIUS);
