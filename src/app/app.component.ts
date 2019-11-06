@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import * as data from './mocks/data.json';
 
 @Component({
 	selector: 'app-root',
@@ -6,10 +7,5 @@ import { Component } from '@angular/core';
 	styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
-	public data = {
-		viewData: {
-			netLinksDatum: [],
-			netElementsDatum: []
-		}
-	};
+	public data = (data as any).default;
 }
