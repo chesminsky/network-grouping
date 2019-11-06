@@ -481,25 +481,26 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 	 * Запустить симуляцию
 	 */
 	private simulateForce(): Simulation<NetElementDatum, NetLinkDatum> {
-		const NODE_RADIUS = 60;
+		const NODE_RADIUS = 60 * 2;
 		const CHARGE_STRENGTH = 1;
-		const ALPHA_DECAY = .1;
+		const ALPHA_DECAY = .01;
 
 		const linkForce = d3.forceLink(this.netLinksDatum).id((d: NetElementDatum) => String(d.id)).strength((link: NetLinkDatum) => {
 			return (link.source as NetElementDatum).group === (link.target as NetElementDatum).group ? 1 : 0.1;
 		});
 		const collideForce = d3.forceCollide(NODE_RADIUS);
-		const attractForce = d3.forceManyBody().strength(CHARGE_STRENGTH * 3).distanceMin(NODE_RADIUS * 20);
-		const repelForce = d3.forceManyBody().strength(-CHARGE_STRENGTH).distanceMax(NODE_RADIUS * 5).distanceMin(NODE_RADIUS);
+		const attractForce = d3.forceManyBody().strength(CHARGE_STRENGTH).distanceMin(NODE_RADIUS * 20);
+		const repelForce = d3.forceManyBody().strength(-CHARGE_STRENGTH / 3).distanceMax(NODE_RADIUS * 5).distanceMin(NODE_RADIUS);
 		const allDynamic = this.netElementsDatum.every((ne) => !ne.fx && !ne.fy);
 		const centerForce = allDynamic ? d3.forceCenter(this.width / 2, this.height / 2) : null; // not needed in static graph
 
 		return d3.forceSimulation(this.netElementsDatum)
 				 .alphaDecay(ALPHA_DECAY)
 				 .force('link', linkForce)
-				 .force('attractForce', attractForce)
-				 .force('repelForce', repelForce)
-				 .force('collide', collideForce)
+				//  .force('attractForce', attractForce)
+				//  .force('repelForce', repelForce)
+				 .force('charge', d3.forceManyBody().strength(-200))
+				  .force('collide', collideForce)
 				 .force('center', centerForce)
 				 .on('tick', this.tick)
 				 .on('end', () => {
@@ -532,6 +533,67 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 		const getPos = (key: string, axis: string) => (d: NetLinkDatum) => {
 			return (d[key] as NetElementDatum)[axis];
 		};
+
+		const alpha = this.simulation.alpha();
+		const coords = {};
+		const groups = [];
+
+		// sort the nodes into groups:
+		this.nodes.each((d) => {
+			if (groups.indexOf(d.group) === -1) {
+				groups.push(d.group);
+				coords[d.group] = [];
+			}
+
+			coords[d.group].push({ x: d.x, y: d.y });
+		});
+
+		// get the centroid of each group:
+		const centroids = {};
+
+		for (const group of Object.keys(coords)) {
+			const groupNodes = coords[group];
+
+			const n = groupNodes.length;
+			let cx = 0;
+			let tx = 0;
+			let cy = 0;
+			let ty = 0;
+
+			groupNodes.forEach((d) => {
+				tx += d.x;
+				ty += d.y;
+			});
+
+			cx = tx / n;
+			cy = ty / n;
+
+			centroids[group] = { x: cx, y: cy };
+		}
+
+		// don't modify points close the the group centroid:
+		let minDistance = 10;
+
+		if (alpha < 0.1) {
+			minDistance = 10 + (1000 * (0.1 - alpha));
+		}
+
+		// adjust each point if needed towards group centroid:
+		this.nodes.each((d) => {
+			const cx = centroids[d.group].x;
+			const cy = centroids[d.group].y;
+			const x = d.x;
+			const y = d.y;
+			const dx = cx - x;
+			const dy = cy - y;
+
+			const r = Math.sqrt(dx * dx + dy * dy);
+
+			if (r > minDistance && !d.fx && !d.fy) {
+				d.x = x * 0.9 + cx * 0.1;
+				d.y = y * 0.9 + cy * 0.1;
+			}
+		});
 
 		this.links.selectAll('line')
 			.attr('x1', getPos('source', 'x'))
