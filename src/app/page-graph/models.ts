@@ -30,4 +30,14 @@ export interface NetElementDatum extends SimulationNodeDatum, NetElement {
 
 export interface NetLinkDatum extends NetLink, SimulationLinkDatum<NetElementDatum> {
 	hidden?: boolean;
+	elements?: {
+		source: NetLinkElementAttrs,
+		target: NetLinkElementAttrs
+	};
+}
+
+export interface NetLinkElementAttrs {
+	id: number;
+	name: string;
+	group: string;
 }

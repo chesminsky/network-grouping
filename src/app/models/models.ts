@@ -22,6 +22,7 @@ export interface NetElement {
 	eventCount?: number;
 	severity?: number;
 	ports: Array<NetElementPort>;
+	group?: string;
 	viewAttr?: {
 		fx: number;
 		fy: number;
@@ -42,10 +43,6 @@ export interface NetLink {
 	loadStatusByMetricDescType: {[index: number] : {loadingPercent: number, status: string}};
 	portA: NetElementPort;
 	portB: NetElementPort;
-	graphIdNames?: { // имя и id графов, к которым относится линк
-		a: {id: number, name: string},
-		b: {id: number, name: string}
-	};
 }
 export interface NetElementFilter {
 	filter?: TopologyFilter;
