@@ -191,7 +191,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 					this.router.navigate([this.newgraphDataUrl]);
 				} else {
 					this.graphRestService.update(this.graphData).subscribe((id) => {
-						this.router.navigate(['topology' ,'graph', id]);
+						this.router.navigate(['topology', 'graph', id]);
 					});
 				}
 			}),
@@ -249,7 +249,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 				this.netLinksDatum.splice(i, 1);
 			}
 		}
-		
+
 		this.tick();
 		this.checkVisibility();
 	}
@@ -385,7 +385,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			.attr('class', (d) => {
 				let className = `node node--${d.type}`;
 				if (d.highlighted) {
-					className+= ' node--highlighted';
+					className += ' node--highlighted';
 				}
 				return className;
 			})
@@ -398,7 +398,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 				}
 			});
 
-		
+
 		const getIcon = (i: number): SVGSVGElement => {
 			const { type, severity, techSegment } = this.netElementsDatum[i];
 			const techSegmentsIcons = ['RRN'];
@@ -422,7 +422,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 		// node icon
 		nodes.append('g')
 			.attr('transform', (d) => {
-				return `translate(${-getIconWidth(d.type) / 2}, ${-getIconHeight(d.type)/ 2})`;
+				return `translate(${-getIconWidth(d.type) / 2}, ${-getIconHeight(d.type) / 2})`;
 			})
 			.nodes()
 			.forEach((node, i) => node.appendChild(getIcon(i)));
@@ -431,18 +431,18 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 		const textGroup = nodes.append('text');
 
 		textGroup.append('tspan')
-			.attr('y', (d) => -getIconHeight(d.type)/2 - 8)
+			.attr('y', (d) => -getIconHeight(d.type) / 2 - 8)
 			.text((d) => d.name);
 
 		textGroup.append('tspan')
 			.lower()
 			.filter((d) => d.eventCount > 0)
-			.attr('y', (d) => -getIconHeight(d.type)/2 - 8)
+			.attr('y', (d) => -getIconHeight(d.type) / 2 - 8)
 			.attr('fill', '#B00020')
 			.text((d) => d.eventCount + ' ');
 
 		const textWidths = textGroup.nodes().map((n) => n.getBBox().width);
-		textGroup.nodes().forEach((elem, i) => elem.setAttribute('transform', `translate(${-textWidths[i]/2}, 0)`));
+		textGroup.nodes().forEach((elem, i) => elem.setAttribute('transform', `translate(${-textWidths[i] / 2}, 0)`));
 
 		// text bg
 		nodes.append('rect')
@@ -450,7 +450,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			.attr('width', (d, i) => textWidths[i])
 			.attr('height', 18)
 			.attr('fill', 'white')
-			.attr('y', (d) => -getIconHeight(d.type)/2 - 21)
+			.attr('y', (d) => -getIconHeight(d.type) / 2 - 21)
 			.attr('x', (d, i) => -textWidths[i] / 2);
 
 		// node selection
@@ -556,7 +556,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			this.unselectAll();
 			this.zoomTransform = d3.event.transform;
 		});
-		
+
 		this.svg.call(this.zoom).on('zoom', this.zoom).on('dblclick.zoom', null);
 
 		this.zoom.transform(this.svg, this.zoomTransform);
@@ -609,7 +609,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			<feComponentTransfer>
 				<feFuncA type="linear" slope="0.5"/> <!-- slope is the opacity of the shadow -->
 			</feComponentTransfer>
-			<feMerge> 
+			<feMerge>
 				<feMergeNode/> <!-- this contains the offset blurred image -->
 				<feMergeNode in="SourceGraphic"/> <!-- this contains the element that the filter is applied to -->
 			</feMerge>
@@ -642,5 +642,5 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			}
 		`);
 	}
-	
+
 }
