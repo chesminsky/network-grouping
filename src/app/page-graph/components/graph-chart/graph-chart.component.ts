@@ -30,7 +30,9 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 	private width: number;
 	private height: number;
 	private svg: Selection<SVGElement, any, any, any>;
+	private groups: Selection<SVGGElement, any, any, any>;
 	private graph: Selection<SVGGElement, any, any, any>;
+	private paths: Selection<SVGGElement, any, any, any>;
 	private links: Selection<SVGGElement, any, any, any>;
 	private nodes: Selection<SVGGElement, any, any, any>;
 	private simulation: Simulation<NetElementDatum, NetLinkDatum>;
@@ -52,6 +54,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 	private iconsPromise: Promise<Array<Document>>;
 	private initialCoords: { x: number; y: number; };
 	private zoomTransform: ZoomTransform = d3.zoomIdentity;
+	private groupCodes: string[];
 
 	constructor(
 		private elemRef: ElementRef,
@@ -156,6 +159,9 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 
 		this.initGrid();
 		this.graph = this.svg.append('g');
+		this.groupCodes = this.getAllGroupCodes();
+		this.groups = this.makeGroups()
+		this.paths = this.makePaths();
 		this.links = this.initLinks();
 		this.nodes = this.initNodes();
 
@@ -536,15 +542,10 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 
 		const alpha = this.simulation.alpha();
 		const coords = {};
-		const groups = [];
 
 		// sort the nodes into groups:
 		this.nodes.each((d) => {
-			if (groups.indexOf(d.group) === -1) {
-				groups.push(d.group);
-				coords[d.group] = [];
-			}
-
+			coords[d.group] = coords[d.group] || [];
 			coords[d.group].push({ x: d.x, y: d.y });
 		});
 
@@ -605,6 +606,99 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			.attr('transform', (d: NetElementDatum) => {
 				return `translate(${d.x}, ${d.y})`;
 			});
+
+		this.updateGroups();
+	}
+
+
+	updateGroups() {
+		this.groupCodes.forEach((groupCode) => {
+
+			let centroid;
+			const path = this.paths.filter((code) => {
+				return code === groupCode;
+			})
+				.attr('transform', 'scale(1) translate(0,0)')
+				.attr('d', (d) => {
+					const polygon = this.polygonGenerator(d);
+					centroid = d3.polygonCentroid(polygon);
+
+					// to scale the shape properly around its points:
+					// move the 'g' element to the centroid point, translate
+					// all the path around the center of the 'g' and then
+					// we can scale the 'g' element properly
+					return this.valueline()(
+						polygon.map((point) => {
+							return [point[0] - centroid[0], point[1] - centroid[1]];
+						})
+					);
+				});
+
+			d3.select(path.node().parentNode).attr('transform', 'translate(' + centroid[0] + ',' + (centroid[1]) + ') scale(' + 1.2 + ')');
+		});
+	}
+
+
+  // count members of each group. Groups with less
+  // than 3 member will not be considered (creating
+  // a convex hull need 3 points at least)
+	private getAllGroupCodes(): string[] {
+		return d3.set(this.netElementsDatum.map((n) => n.group))
+			.values()
+			.map((group: string) => {
+				return {
+					code: group,
+					count: this.netElementsDatum.filter((n) => n.group === group).length
+				};
+			})
+			.filter((group) => group.count > 2)
+			.map((group) => group.code);
+	}
+
+	private makeGroups(): Selection<SVGGElement, any, any, any> {
+		return this.graph.append('g').attr('class', 'groups');
+	}
+
+	private makePaths(): Selection<SVGGElement, any, any, any> {
+		const paths = this.groups.selectAll('.path-placeholder')
+			.data(this.groupCodes)
+			.enter()
+			.append('g')
+			.attr('class', 'path_placeholder')
+			.append('path')
+			.attr('stroke', 'rgb(0, 145, 234)')
+			.attr('fill', 'rgba(0, 145, 234, .1)')
+			.attr('opacity', 0);
+
+		paths
+			.transition()
+			.duration(2000)
+			.attr('opacity', 1);
+
+		return paths;
+	}
+
+
+	// select nodes of the group, retrieve its positions
+	// and return the convex hull of the specified points
+	// (3 points as minimum, otherwise returns null)
+	private polygonGenerator(groupId: number) {
+		const nodeCoords: [number, number][] = this.nodes
+			.filter((d) => d.group === groupId)
+			.data()
+			.map((d) => [d.x, d.y]);
+
+		return d3.polygonHull(nodeCoords);
+	}
+
+	/**
+	 * Построение линии полигона
+	 */
+	private valueline() {
+		return d3.line()
+				.x((d) => d[0])
+				.y((d) => d[1])
+				.curve(d3.curveCatmullRomClosed);
 	}
 
 	/**
