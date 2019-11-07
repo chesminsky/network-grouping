@@ -614,7 +614,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 	/**
 	 * Вычисляем координаты полигона
 	 */
-	updatePolygonCoordinates() {
+	private updatePolygonCoordinates() {
 		this.groupCodes.forEach((groupCode) => {
 
 			let centroid;
@@ -663,11 +663,11 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 	 * Линии полигона
 	 */
 	private makePaths(): Selection<SVGGElement, any, any, any> {
-		const paths = this.groups.selectAll('.path-placeholder')
+		const paths = this.groups.selectAll('.path')
 			.data(this.groupCodes)
 			.enter()
 			.append('g')
-			.attr('class', 'path_placeholder')
+			.attr('class', 'path')
 			.append('path')
 			.attr('stroke', 'rgb(0, 145, 234)')
 			.attr('fill', 'rgba(0, 145, 234, .1)')
@@ -737,26 +737,44 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 	 * Добавление drag-n-drop поведения
 	 */
 	private initDragging() {
+
+		const dragStart = () => {
+			this.unselectAll();
+			if (!d3.event.active) {
+				this.simulation.alphaTarget(0.3).restart();
+			}
+			this.fixCoordinates();
+		};
+
+		const dragEnd = () => {
+			if (!d3.event.active) {
+				this.simulation.alphaTarget(0);
+			}
+
+			this.saveGraphCoordinates();
+		};
+
 		d3.drag()
-			.on('start', () => {
-				this.unselectAll();
-				if (!d3.event.active) {
-					this.simulation.alphaTarget(0.3).restart();
-				}
-				this.fixCoordinates();
-			})
+			.on('start', dragStart)
 			.on('drag', (d: NetElementDatum) => {
 				d.fx = d3.event.x;
 				d.fy = d3.event.y;
 			})
-			.on('end', () => {
-				if (!d3.event.active) {
-					this.simulation.alphaTarget(0);
-				}
-
-				this.saveGraphCoordinates();
-			})
+			.on('end', dragEnd)
 			(this.nodes);
+
+		d3.drag()
+			.on('start', dragStart)
+			.on('drag', (groupCode) => {
+				this.nodes
+					.filter((d) => d.group === groupCode)
+					.each((d) => {
+						d.fx += d3.event.dx;
+						d.fy += d3.event.dy;
+					});
+			})
+			.on('end', dragEnd)
+			(this.groups.selectAll('.path'));
 	}
 
 	/**
