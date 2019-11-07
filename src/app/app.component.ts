@@ -24,28 +24,11 @@ export class AppComponent implements OnInit{
 			ge.group = this.getGroup();
 		});
 
-		/*
-		data.viewData.netLinksDatum.forEach((nl) => {
-			const findBy = key => data.graphElements.find((ge) => ge.id === nl[key]);
-			const source = findBy('source');
-			const target = findBy('target');
-
-			const assign = ne => Object.assign({}, {id: ne.id, name: ne.name, group: ne.group});
-
-			nl.elements = {
-				source: assign(source),
-				target: assign(target)
-			};
-		});
-		*/
-
-		console.log(data);
-
 		return data;
 	}
 
 	private getGroup() {
-		const groups = ['group 1', 'group 2', 'group 3'];
+		const groups = ['g1', 'g2', 'g3', 'g4'];
 		return groups[Math.floor(Math.random() * groups.length)];
 	}
 

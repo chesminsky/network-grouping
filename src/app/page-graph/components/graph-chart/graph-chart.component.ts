@@ -487,26 +487,25 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 	 * Запустить симуляцию
 	 */
 	private simulateForce(): Simulation<NetElementDatum, NetLinkDatum> {
-		const NODE_RADIUS = 60 * 2;
+		const MINIMUM_DISTANCE = 100;
 		const CHARGE_STRENGTH = 1;
-		const ALPHA_DECAY = .01;
+		const ALPHA_DECAY = 0.0228;
 
 		const linkForce = d3.forceLink(this.netLinksDatum).id((d: NetElementDatum) => String(d.id)).strength((link: NetLinkDatum) => {
 			return (link.source as NetElementDatum).group === (link.target as NetElementDatum).group ? 1 : 0.1;
 		});
-		const collideForce = d3.forceCollide(NODE_RADIUS);
-		const attractForce = d3.forceManyBody().strength(CHARGE_STRENGTH).distanceMin(NODE_RADIUS * 20);
-		const repelForce = d3.forceManyBody().strength(-CHARGE_STRENGTH / 3).distanceMax(NODE_RADIUS * 5).distanceMin(NODE_RADIUS);
+		const collideForce = d3.forceCollide(MINIMUM_DISTANCE);
+		const attractForce = d3.forceManyBody().strength(CHARGE_STRENGTH).distanceMin(MINIMUM_DISTANCE * 20);
+		const repelForce = d3.forceManyBody().strength(-CHARGE_STRENGTH / 3).distanceMax(MINIMUM_DISTANCE * 5).distanceMin(MINIMUM_DISTANCE);
 		const allDynamic = this.netElementsDatum.every((ne) => !ne.fx && !ne.fy);
 		const centerForce = allDynamic ? d3.forceCenter(this.width / 2, this.height / 2) : null; // not needed in static graph
 
 		return d3.forceSimulation(this.netElementsDatum)
 				 .alphaDecay(ALPHA_DECAY)
 				 .force('link', linkForce)
-				//  .force('attractForce', attractForce)
-				//  .force('repelForce', repelForce)
-				 .force('charge', d3.forceManyBody().strength(-200))
-				  .force('collide', collideForce)
+				 .force('attractForce', attractForce)
+				 .force('repelForce', repelForce)
+				 .force('collide', collideForce)
 				 .force('center', centerForce)
 				 .on('tick', this.tick)
 				 .on('end', () => {
@@ -540,6 +539,22 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			return (d[key] as NetElementDatum)[axis];
 		};
 
+		this.adjustGroups();
+		this.updateGroups();
+
+		this.links.selectAll('line')
+			.attr('x1', getPos('source', 'x'))
+			.attr('y1', getPos('source', 'y'))
+			.attr('x2', getPos('target', 'x'))
+			.attr('y2', getPos('target', 'y'));
+
+		this.nodes
+			.attr('transform', (d: NetElementDatum) => {
+				return `translate(${d.x}, ${d.y})`;
+			});
+	}
+
+	adjustGroups() {
 		const alpha = this.simulation.alpha();
 		const coords = {};
 
@@ -573,10 +588,10 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 		}
 
 		// don't modify points close the the group centroid:
-		let minDistance = 10;
+		let minDistance = 100;
 
 		if (alpha < 0.1) {
-			minDistance = 10 + (1000 * (0.1 - alpha));
+			minDistance = 10 + (10 * (0.1 - alpha));
 		}
 
 		// adjust each point if needed towards group centroid:
@@ -595,19 +610,6 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 				d.y = y * 0.9 + cy * 0.1;
 			}
 		});
-
-		this.links.selectAll('line')
-			.attr('x1', getPos('source', 'x'))
-			.attr('y1', getPos('source', 'y'))
-			.attr('x2', getPos('target', 'x'))
-			.attr('y2', getPos('target', 'y'));
-
-		this.nodes
-			.attr('transform', (d: NetElementDatum) => {
-				return `translate(${d.x}, ${d.y})`;
-			});
-
-		this.updateGroups();
 	}
 
 
