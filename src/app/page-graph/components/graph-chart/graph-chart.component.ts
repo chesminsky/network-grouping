@@ -539,8 +539,8 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			return (d[key] as NetElementDatum)[axis];
 		};
 
-		this.adjustGroups();
-		this.updateGroups();
+		this.adjustNodesPositionTowardsGroups();
+		this.updatePolygonCoordinates();
 
 		this.links.selectAll('line')
 			.attr('x1', getPos('source', 'x'))
@@ -554,17 +554,18 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			});
 	}
 
-	adjustGroups() {
+	/**
+	 * Функция перемещающая координаты узлов ближе к центру полигона
+	 */
+	private adjustNodesPositionTowardsGroups() {
 		const alpha = this.simulation.alpha();
 		const coords = {};
 
-		// sort the nodes into groups:
 		this.nodes.each((d) => {
 			coords[d.group] = coords[d.group] || [];
 			coords[d.group].push({ x: d.x, y: d.y });
 		});
 
-		// get the centroid of each group:
 		const centroids = {};
 
 		for (const group of Object.keys(coords)) {
@@ -587,14 +588,12 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			centroids[group] = { x: cx, y: cy };
 		}
 
-		// don't modify points close the the group centroid:
 		let minDistance = 100;
 
 		if (alpha < 0.1) {
 			minDistance = 10 + (10 * (0.1 - alpha));
 		}
 
-		// adjust each point if needed towards group centroid:
 		this.nodes.each((d) => {
 			const cx = centroids[d.group].x;
 			const cy = centroids[d.group].y;
@@ -612,8 +611,10 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 		});
 	}
 
-
-	updateGroups() {
+	/**
+	 * Вычисляем координаты полигона
+	 */
+	updatePolygonCoordinates() {
 		this.groupCodes.forEach((groupCode) => {
 
 			let centroid;
@@ -624,26 +625,20 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 				.attr('d', (d) => {
 					const polygon = this.polygonGenerator(d);
 					centroid = d3.polygonCentroid(polygon);
-
-					// to scale the shape properly around its points:
-					// move the 'g' element to the centroid point, translate
-					// all the path around the center of the 'g' and then
-					// we can scale the 'g' element properly
 					return this.valueline()(
 						polygon.map((point) => {
 							return [point[0] - centroid[0], point[1] - centroid[1]];
 						})
 					);
 				});
-
 			d3.select(path.node().parentNode).attr('transform', 'translate(' + centroid[0] + ',' + (centroid[1]) + ') scale(' + 1.2 + ')');
 		});
 	}
 
-
-  // count members of each group. Groups with less
-  // than 3 member will not be considered (creating
-  // a convex hull need 3 points at least)
+	/**
+	 * Возвращаем массив кодов групп, в которых есть минимум три узла.
+	 * Для полигона нужно минимум три
+	 */
 	private getAllGroupCodes(): string[] {
 		return d3.set(this.netElementsDatum.map((n) => n.group))
 			.values()
@@ -657,10 +652,16 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			.map((group) => group.code);
 	}
 
+	/**
+	 * Слой для групп
+	 */
 	private makeGroups(): Selection<SVGGElement, any, any, any> {
 		return this.graph.append('g').attr('class', 'groups');
 	}
 
+	/**
+	 * Линии полигона
+	 */
 	private makePaths(): Selection<SVGGElement, any, any, any> {
 		const paths = this.groups.selectAll('.path-placeholder')
 			.data(this.groupCodes)
@@ -680,13 +681,13 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 		return paths;
 	}
 
-
-	// select nodes of the group, retrieve its positions
-	// and return the convex hull of the specified points
-	// (3 points as minimum, otherwise returns null)
-	private polygonGenerator(groupId: number) {
+	/*
+		Выбираем узлы относящиеся к группе
+		возвращаем полигон (минимум по трем узлам)
+	*/
+	private polygonGenerator(groupCode: string): Array<[number, number]> {
 		const nodeCoords: [number, number][] = this.nodes
-			.filter((d) => d.group === groupId)
+			.filter((d) => d.group === groupCode)
 			.data()
 			.map((d) => [d.x, d.y]);
 
