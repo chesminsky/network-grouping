@@ -156,7 +156,17 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			.attr('height', this.height);
 
 		this.initGrid();
-		this.levelScale = d3.scaleOrdinal().domain(['1', '2', '3']).range([100, this.height / 2, this.height - 100]);
+
+		const countByTechSegment = (techSegment) => this.netElementsDatum.filter((curr: NetElementDatum) => curr.techSegment === techSegment).length;
+		const ipbbs = countByTechSegment('IPBB');
+		const mbhs = countByTechSegment('MBH');
+		const rrns = countByTechSegment('RRN');
+
+		console.log(ipbbs, mbhs, rrns);
+		const SPACE = 20;
+		const range = [this.height / 2 - (mbhs + ipbbs) * SPACE, this.height / 2, this.height / 2 + (mbhs + rrns) * SPACE];
+		console.log('range', range);
+		this.levelScale = d3.scaleOrdinal().domain(['IPBB', 'MBH', 'RRN']).range(range);
 		this.graph = this.svg.append('g');
 		this.links = this.initLinks();
 		this.nodes = this.initNodes();
@@ -434,7 +444,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 
 		textGroup.append('tspan')
 			.attr('y', (d) => -getIconHeight(d.type) / 2 - 8)
-			.text((d) => d.name + ' level: ' + d.level);
+			.text((d) => d.name);
 
 		textGroup.append('tspan')
 			.lower()
@@ -504,7 +514,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 				 .force('collide', collideForce)
 				 // .force('center', centerForce)
 				 .force('y', d3.forceY().strength(1).y((d: NetElementDatum) => {
-					 const l = this.levelScale('' + d.level);
+					 const l = this.levelScale(d.techSegment);
 					 console.log(l);
 					 return l;
 				 }))
