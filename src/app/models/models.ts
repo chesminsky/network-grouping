@@ -22,7 +22,7 @@ export interface NetElement {
 	eventCount?: number;
 	severity?: number;
 	ports: Array<NetElementPort>;
-	group?: string;
+	level: number;
 	viewAttr?: {
 		fx: number;
 		fy: number;

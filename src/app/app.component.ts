@@ -20,21 +20,8 @@ export class AppComponent implements OnInit{
 	public getData() {
 		const data: GraphViewData = (mock as any).default;
 
-		data.graphElements.forEach((ge) => {
-			ge.group = this.getGroup();
-		});
-
-		data.viewData.netLinksDatum.forEach((nl) => {
-			const findBy = key => data.graphElements.find((ge) => ge.id === nl[key]);
-			const source = findBy('source');
-			const target = findBy('target');
-
-			const assign = ne => Object.assign({}, {id: ne.id, name: ne.name, group: ne.group});
-
-			nl.elements = {
-				source: assign(source),
-				target: assign(target)
-			};
+		data.viewData.netElementsDatum.forEach((ge) => {
+			ge.level = this.getLevel();
 		});
 
 		console.log(data);
@@ -42,9 +29,9 @@ export class AppComponent implements OnInit{
 		return data;
 	}
 
-	private getGroup() {
-		const groups = ['group 1', 'group 2', 'group 3'];
-		return groups[Math.floor(Math.random() * groups.length)];
+	private getLevel() {
+		const levels = 3;
+		return Math.ceil(Math.random() * levels);
 	}
 
 

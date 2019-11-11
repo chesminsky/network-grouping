@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, OnChanges, Input, Output, EventEmitter } from '@angular/core';
 import * as d3 from 'd3';
 import { NetElementDatum, NetLinkDatum, GraphViewData } from '../../models';
-import { Selection, Simulation, ZoomBehavior, ScaleLinear, Axis, ZoomTransform } from 'd3';
+import { Selection, Simulation, ZoomBehavior, ScaleLinear, Axis, ZoomTransform, ScaleOrdinal } from 'd3';
 import { SEVERITY_ARRAY } from '../../../mocks/severity';
 import { Subscription } from 'rxjs';
 import { Router } from '@angular/router';
@@ -42,6 +42,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 	private gY: Selection<SVGGElement, any, any, any>;
 	private icons: { [key: string]: SVGSVGElement } = {};
 	private zoom: ZoomBehavior<Element, unknown>;
+	private levelScale;
 
 	// misc
 	private showClouds: boolean;
@@ -155,6 +156,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 			.attr('height', this.height);
 
 		this.initGrid();
+		this.levelScale = d3.scaleOrdinal().domain(['1', '2', '3']).range([100, this.height / 2, this.height - 100]);
 		this.graph = this.svg.append('g');
 		this.links = this.initLinks();
 		this.nodes = this.initNodes();
@@ -432,7 +434,7 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 
 		textGroup.append('tspan')
 			.attr('y', (d) => -getIconHeight(d.type) / 2 - 8)
-			.text((d) => d.name);
+			.text((d) => d.name + ' level: ' + d.level);
 
 		textGroup.append('tspan')
 			.lower()
@@ -485,7 +487,9 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 		const CHARGE_STRENGTH = 100;
 		const ALPHA_DECAY = .1;
 
-		const linkForce = d3.forceLink(this.netLinksDatum).id((d: NetElementDatum) => String(d.id));
+		const linkForce = d3.forceLink(this.netLinksDatum).id((d: NetElementDatum) => String(d.id)).strength((link: NetLinkDatum) => {
+			return (link.source as NetElementDatum).level === (link.target as NetElementDatum).level ? 1 : 0.03;
+		});
 		const collideForce = d3.forceCollide(NODE_RADIUS);
 		const attractForce = d3.forceManyBody().strength(CHARGE_STRENGTH * 3).distanceMin(NODE_RADIUS * 20);
 		const repelForce = d3.forceManyBody().strength(-CHARGE_STRENGTH).distanceMax(NODE_RADIUS * 5).distanceMin(NODE_RADIUS);
@@ -496,9 +500,15 @@ export class GraphChartComponent implements OnDestroy, OnChanges {
 				 .alphaDecay(ALPHA_DECAY)
 				 .force('link', linkForce)
 				 .force('attractForce', attractForce)
-				 .force('repelForce', repelForce)
+				//  .force('repelForce', repelForce)
 				 .force('collide', collideForce)
-				 .force('center', centerForce)
+				 // .force('center', centerForce)
+				 .force('y', d3.forceY().strength(1).y((d: NetElementDatum) => {
+					 const l = this.levelScale('' + d.level);
+					 console.log(l);
+					 return l;
+				 }))
+				 .force('x', d3.forceX().strength(1).x(this.width / 2))
 				 .on('tick', this.tick)
 				 .on('end', () => {
 					 this.fixCoordinates();

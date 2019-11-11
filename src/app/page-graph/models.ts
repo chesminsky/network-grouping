@@ -32,12 +32,12 @@ export interface NetLinkDatum extends NetLink, SimulationLinkDatum<NetElementDat
 	hidden?: boolean;
 	elements?: {
 		source: NetLinkElementAttrs,
-		target: NetLinkElementAttrs
+		target: NetLinkElementAttrs,
 	};
 }
 
 export interface NetLinkElementAttrs {
 	id: number;
 	name: string;
-	group: string;
+	level: number;
 }
